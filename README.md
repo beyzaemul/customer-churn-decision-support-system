@@ -44,4 +44,3 @@ Eğitilen modeli işlevsel kılmak adına dinamik bir yönetim paneli geliştiri
 ---
 
 **Hazırlayan:** Elif Beyza Emül  
-**Eğitim:** Başkent Üniversitesi - Yönetim Bilişim Sistemleri, 3. Sınıf
