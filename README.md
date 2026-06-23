@@ -26,7 +26,7 @@ Analizlerin ardından veri seti makine öğrenmesi modelleri için hazırlanmı�
 
 ---
 
-## 3. Full-Stack Panel Mimarisi
+## 3. Yazılım Mimarisi
 
 Eğitilen modeli işlevsel kılmak adına dinamik bir yönetim paneli geliştirilmiştir:
 
