@@ -1,4 +1,5 @@
 Müşteri Terk (Churn) Karar Destek Sistemi
+
 Bu projede, telekomünikasyon sektöründeki müşteri kayıplarını tahmin etmek ve stratejik simülasyonlar gerçekleştirmek amacıyla uçtan uca bir Karar Destek Sistemi geliştirdim.
 
 1. Veri Seti (Kaggle - Telco Customer Churn)
