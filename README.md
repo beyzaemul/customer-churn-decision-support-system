@@ -45,4 +45,3 @@ Eğitilen modeli işlevsel kılmak adına dinamik bir yönetim paneli geliştiri
 ---
 
 **Hazırlayan:** Elif Beyza Emül  
->>>>>>> aa3b6042f2876f7a8e741fd832ca0c9ac8de95a6
