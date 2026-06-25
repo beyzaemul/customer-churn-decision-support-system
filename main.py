@@ -48,8 +48,8 @@ class CustomerSimulationData(BaseModel):
     tenure: int
     MonthlyCharges: float
     TotalCharges: float
-    Contract: str          
-    InternetService: str   
+    Contract: str
+    InternetService: str
 
 class ScenarioSaveData(BaseModel):
     name: str
@@ -62,46 +62,39 @@ class ScenarioSaveData(BaseModel):
     seniorCitizen: int
 
 @app.post("/api/v1/predict")
-def predict_risk(data: CustomerSimulationData):
-    input_data = data.model_dump()
+def predict_churn(data: CustomerSimulationData):
+    input_data = {
+        'gender': [data.gender],
+        'SeniorCitizen': [data.SeniorCitizen],
+        'tenure': [data.tenure],
+        'MonthlyCharges': [data.MonthlyCharges],
+        'TotalCharges': [data.TotalCharges],
+        'Contract_Month-to-month': [1 if data.Contract == "Month-to-month" else 0],
+        'Contract_One year': [1 if data.Contract == "One year" else 0],
+        'Contract_Two year': [1 if data.Contract == "Two year" else 0],
+        'InternetService_DSL': [1 if data.InternetService == "DSL" else 0],
+        'InternetService_Fiber optic': [1 if data.InternetService == "Fiber optic" else 0],
+        'InternetService_No': [1 if data.InternetService == "No" else 0]
+    }
     
-    encoded_data = {col: 0 for col in model_columns}
-    for key in ['gender', 'SeniorCitizen', 'tenure', 'MonthlyCharges', 'TotalCharges']:
-        if key in encoded_data:
-            encoded_data[key] = input_data[key]
-            
-    contract_key = f"Contract_{input_data['Contract']}"
-    if contract_key in encoded_data:
-        encoded_data[contract_key] = 1
-    elif contract_key.replace(" ", "_") in encoded_data:
-        encoded_data[contract_key.replace(" ", "_")] = 1
+    X_input = pd.DataFrame(input_data)
+    X_input = X_input.reindex(columns=model_columns, fill_value=0)
+    
+    prob = model.predict_proba(X_input)[0][1]
+    prob_percentage = round(float(prob) * 100, 2)
+    
+    factors = []
+    if data.Contract == "Month-to-month":
+        factors.append("Aydan aya sözleşme tipi kayıp riskini artırıyor.")
+    if data.InternetService == "Fiber optic":
+        factors.append("Fiber optik hat kullanan müşterilerde genel şikayet oranı yüksek.")
+    if data.tenure < 6:
+        factors.append("Yeni müşterilerin ilk 6 ayda ayrılma eğilimi yüksektir.")
         
-    internet_key = f"InternetService_{input_data['InternetService']}"
-    if internet_key in encoded_data:
-        encoded_data[internet_key] = 1
-    elif internet_key.replace(" ", "_") in encoded_data:
-        encoded_data[internet_key.replace(" ", "_")] = 1
-
-    df_input = pd.DataFrame([encoded_data], columns=model_columns)
-    
-    risk_probability = model.predict_proba(df_input)[0][1]
-    risk_score = round(float(risk_probability) * 100, 2)
-    
-    fatura_etkisi = min(40, int((input_data['MonthlyCharges'] / 120) * 40))
-    sadakat_etkisi = max(5, int(40 - (input_data['tenure'] / 72) * 40))
-    sozlesme_etkisi = 35 if input_data['Contract'] == "Month-to-month" else (15 if input_data['Contract'] == "One year" else 5)
-    internet_etkisi = 25 if input_data['InternetService'] == "Fiber optic" else 10
-    
-    toplam_agirlik = fatura_etkisi + sadakat_etkisi + sozlesme_etkisi + internet_etkisi
-    
-    faktorler = [
-        {"name": "Yüksek Fatura Yükü", "value": round((fatura_etkisi / toplam_agirlik) * risk_score, 1)},
-        {"name": "Düşük Müşteri Sadakati (Tenure)", "value": round((sadakat_etkisi / toplam_agirlik) * risk_score, 1)},
-        {"name": "Kısa Dönemli Sözleşme Riski", "value": round((sozlesme_etkisi / toplam_agirlik) * risk_score, 1)},
-        {"name": "Hizmet Tipi Etkisi", "value": round((internet_etkisi / toplam_agirlik) * risk_score, 1)}
-    ]
-    
-    return {"risk_score": risk_score, "factors": faktorler, "status": "Success"}
+    return {
+        "churn_probability": prob_percentage,
+        "risk_factors": factors
+    }
 
 @app.post("/api/v1/scenarios")
 def save_scenario(scen: ScenarioSaveData):
@@ -138,8 +131,8 @@ def delete_scenario(scenario_id: int):
     cursor.execute('DELETE FROM saved_scenarios WHERE id = ?', (scenario_id,))
     conn.commit()
     conn.close()
-    return {"status": "Success", "message": "Senaryo veritabanından silindi."}
+    return {"status": "Success", "message": "Senaryo başarıyla silindi."}
 
 @app.get("/")
 def health_check():
-    return {"status": "Decision Support API Gateway Online + Database Integrated"}
+    return {"status": "healthy", "message": "API tıkır tıkır çalışıyor."}
