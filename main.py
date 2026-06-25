@@ -58,8 +58,8 @@ class ScenarioSaveData(BaseModel):
     tenure: int
     monthly: float
     score: float
-    gender: int
-    seniorCitizen: int
+    gender: int = 0          
+    seniorCitizen: int = 0
 
 @app.post("/api/v1/predict")
 def predict_churn(data: CustomerSimulationData):
@@ -85,11 +85,11 @@ def predict_churn(data: CustomerSimulationData):
     
     factors = []
     if data.Contract == "Month-to-month":
-        factors.append("Aydan aya sözleşme tipi kayıp riskini artırıyor.")
+        factors.append({"name": "Aydan aya sözleşme tipi kayıp riskini artırıyor.", "value": 30})
     if data.InternetService == "Fiber optic":
-        factors.append("Fiber optik hat kullanan müşterilerde genel şikayet oranı yüksek.")
+        factors.append({"name": "Fiber optik hat kullanan müşterilerde genel şikayet oranı yüksek.", "value": 25})
     if data.tenure < 6:
-        factors.append("Yeni müşterilerin ilk 6 ayda ayrılma eğilimi yüksektir.")
+        factors.append({"name": "Yeni müşterilerin ilk 6 ayda ayrılma eğilimi yüksektir.", "value": 20})
         
     return {
         "churn_probability": prob_percentage,
@@ -135,4 +135,4 @@ def delete_scenario(scenario_id: int):
 
 @app.get("/")
 def health_check():
-    return {"status": "healthy", "message": "API tıkır tıkır çalışıyor."}
+    return {"status": "healthy", "message": "API çalışıyor."}
