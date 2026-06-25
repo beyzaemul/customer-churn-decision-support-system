@@ -65,21 +65,19 @@ function App() {
     }
   };
 
-// 💾 SENARYOYU VERİTABANINA GERÇEK ZAMANLI KAYDETME (BACKEND ENTEGRASYONU)
-  const executeSaveScenario = async () => {
-    if (!newScenarioName.trim()) {
+const executeSaveScenario = async () => {
+    const trimmedName = newScenarioName.trim();
+    if (!trimmedName) {
       alert("Lütfen geçerli bir senaryo ismi giriniz.");
       return;
     }
 
     const currentMonthly = parseFloat(monthlyCharges);
-    // Eğer aksiyon uygulandıysa indirimli fiyatı, uygulanmadıysa mevcut fiyatı kaydet
     const simulatedMonthly = riskScore >= 65 && contract === "Month-to-month" 
       ? Math.round((currentMonthly * 0.75) * 100) / 100 
       : (riskScore >= 40 && internetService === "Fiber optic" ? Math.max(18, Math.round((currentMonthly - 15) * 100) / 100) : currentMonthly);
 
     try {
-      // 🚀 Veriyi doğrudan Python Fast API / Flask backendine gönderiyoruz
       const response = await fetch('http://127.0.0.1:8000/api/v1/scenarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,15 +87,15 @@ function App() {
           internetService: internetService,
           tenure: parseInt(tenure),
           monthly: parseFloat(simulatedMonthly),
-          score: parseFloat(riskScore)
+          score: parseFloat(riskScore),
+          gender: parseInt(gender),                 
+          seniorCitizen: parseInt(seniorCitizen)    
         })
       });
 
       if (response.ok) {
-        // ✅ Kayıt başarılıysa backend'deki güncel listeyi yeniden çek ve tabloyu tazele
         await loadScenariosFromDB();
         
-        // Formu temizle ve kapat
         setNewScenarioName("");
         setIsModalOpen(false);
       } else {
@@ -107,12 +105,13 @@ function App() {
       console.error("Veritabanı kayıt hatası:", error);
       alert("Backend API bağlantı hatası oluştu.");
     }
-  };
-  const saveScenarioToDB = () => {
+};
+
+    const saveScenarioToDB = () => {
     const today = new Date().toLocaleDateString('tr-TR');
     setNewScenarioName(`Senaryo_${today}`);
     setIsModalOpen(true);
-  };
+};
 
   const deleteScenarioFromDB = async (id) => {
     if (!confirm("Silmek istediğinize emin misiniz?")) return;
@@ -123,12 +122,18 @@ function App() {
       console.error("Veritabanı silme hatası:", error);
     }
   };
-  const loadSelectedScenario = (scenario) => {
+const loadSelectedScenario = (scenario) => {
     setContract(scenario.contract);
     setInternetService(scenario.internetService);
     setTenure(parseInt(scenario.tenure));
     setMonthlyCharges(parseFloat(scenario.monthly));
-    setTotalCharges(Math.round((scenario.monthly * scenario.tenure) * 100) / 100);
+    
+    setGender(parseInt(scenario.gender || 0));
+    setSeniorCitizen(parseInt(scenario.seniorCitizen || 0));
+    
+    const calculatedTotal = Math.round((parseFloat(scenario.monthly) * parseInt(scenario.tenure)) * 100) / 100;
+    setTotalCharges(calculatedTotal);
+    
     setRiskScore(parseFloat(scenario.score));
     
     setActiveRecommendation(null);
@@ -321,7 +326,7 @@ function App() {
           </div>
 
           {}
-{/* 🔍 RESMİ ANALİZ VE AKSİYON BUTONU */}
+{}
           <button 
             onClick={handleGenerateRecommendation}
             style={{ 
@@ -457,7 +462,7 @@ function App() {
                 <th style={{ padding: '8px 4px' }}>Sadakat Süresi</th>
                 <th style={{ padding: '8px 4px' }}>Aylık Fatura</th>
                 <th style={{ padding: '8px 4px' }}>Kayıp Riski</th>
-                {/* 🌟 BAŞLIKLAR AYRILDI */}
+                {}
                 <th style={{ padding: '8px 4px', textAlign: 'center', width: '90px' }}>Görüntüle</th>
                 <th style={{ padding: '8px 4px', textAlign: 'center', width: '60px' }}>Sil</th>
               </tr>

@@ -7,7 +7,6 @@ import sqlite3
 
 app = FastAPI(title="Enterprise Customer Churn Decision Support System API")
 
-# CORS Ayarları
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  
@@ -16,7 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🗄️ VERİTABANI KURULUMU (SQLite)
 def init_db():
     conn = sqlite3.connect('scenarios.db')
     cursor = conn.cursor()
@@ -28,16 +26,16 @@ def init_db():
             internetService TEXT,
             tenure INTEGER,
             monthly REAL,
-            score REAL
+            score REAL,
+            gender INTEGER DEFAULT 0,
+            seniorCitizen INTEGER DEFAULT 0
         )
     ''')
     conn.commit()
     conn.close()
 
-# Uygulama açılırken veritabanını hazırla
 init_db()
 
-# Model ve sütunları yüklüyoruz
 with open('churn_model.pkl', 'rb') as file:
     model = pickle.load(file)
 
@@ -53,7 +51,6 @@ class CustomerSimulationData(BaseModel):
     Contract: str          
     InternetService: str   
 
-# Senaryo Kayıt Modeli
 class ScenarioSaveData(BaseModel):
     name: str
     contract: str
@@ -61,6 +58,8 @@ class ScenarioSaveData(BaseModel):
     tenure: int
     monthly: float
     score: float
+    gender: int
+    seniorCitizen: int
 
 @app.post("/api/v1/predict")
 def predict_risk(data: CustomerSimulationData):
@@ -88,7 +87,6 @@ def predict_risk(data: CustomerSimulationData):
     risk_probability = model.predict_proba(df_input)[0][1]
     risk_score = round(float(risk_probability) * 100, 2)
     
-    # XAI Gerekçeleri
     fatura_etkisi = min(40, int((input_data['MonthlyCharges'] / 120) * 40))
     sadakat_etkisi = max(5, int(40 - (input_data['tenure'] / 72) * 40))
     sozlesme_etkisi = 35 if input_data['Contract'] == "Month-to-month" else (15 if input_data['Contract'] == "One year" else 5)
@@ -105,25 +103,23 @@ def predict_risk(data: CustomerSimulationData):
     
     return {"risk_score": risk_score, "factors": faktorler, "status": "Success"}
 
-# 🗄️ API ENDPOINT: Senaryoları Veritabanına Kaydetme
 @app.post("/api/v1/scenarios")
 def save_scenario(scen: ScenarioSaveData):
     conn = sqlite3.connect('scenarios.db')
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO saved_scenarios (name, contract, internetService, tenure, monthly, score)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (scen.name, scen.contract, scen.internetService, scen.tenure, scen.monthly, scen.score))
+        INSERT INTO saved_scenarios (name, contract, internetService, tenure, monthly, score, gender, seniorCitizen)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (scen.name, scen.contract, scen.internetService, scen.tenure, scen.monthly, scen.score, scen.gender, scen.seniorCitizen))
     conn.commit()
     conn.close()
     return {"status": "Success", "message": "Senaryo başarıyla veritabanına kaydedildi."}
 
-# 🗄️ API ENDPOINT: Veritabanındaki Tüm Senaryoları Listeleme
 @app.get("/api/v1/scenarios")
 def get_scenarios():
     conn = sqlite3.connect('scenarios.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id, name, contract, internetService, tenure, monthly, score FROM saved_scenarios ORDER BY id DESC')
+    cursor.execute('SELECT id, name, contract, internetService, tenure, monthly, score, gender, seniorCitizen FROM saved_scenarios ORDER BY id DESC')
     rows = cursor.fetchall()
     conn.close()
     
@@ -131,11 +127,10 @@ def get_scenarios():
     for r in rows:
         scenarios_list.append({
             "id": r[0], "name": r[1], "contract": r[2], "internetService": r[3],
-            "tenure": r[4], "monthly": r[5], "score": r[6]
+            "tenure": r[4], "monthly": r[5], "score": r[6], "gender": r[7], "seniorCitizen": r[8]
         })
     return scenarios_list
 
-# 🗄️ API ENDPOINT: Veritabanından Senaryo Silme
 @app.delete("/api/v1/scenarios/{scenario_id}")
 def delete_scenario(scenario_id: int):
     conn = sqlite3.connect('scenarios.db')
